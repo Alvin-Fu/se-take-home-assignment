@@ -131,8 +131,9 @@ func (c *Controller) run(b *bot) {
 
 		c.emit("Bot #%d started cooking order #%d (%s)", b.id, o.ID, o.Type)
 
+		timer := time.NewTimer(c.cookTime)
 		select {
-		case <-time.After(c.cookTime):
+		case <-timer.C:
 			c.mu.Lock()
 			b.current = nil
 			c.complete = append(c.complete, o)
@@ -140,6 +141,7 @@ func (c *Controller) run(b *bot) {
 			c.emit("Bot #%d finished order #%d -> COMPLETE", b.id, o.ID)
 
 		case <-b.quit:
+			timer.Stop() // 及时释放定时器，避免抢占后计时器悬挂到 cookTime
 			c.mu.Lock()
 			b.current = nil
 			c.enqueueLocked(o) // 退回原优先级位置
